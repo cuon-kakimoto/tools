@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV to Markdown Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">CSV to Markdown</h1>
+            <p class="text-gray-600">CSVやExcelのデータをMarkdownのテーブルに一瞬で変換します。</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <label class="font-semibold text-gray-700">CSV / TSV Input</label>
+                    <label class="text-sm bg-blue-50 text-blue-700 px-2 py-1 rounded cursor-pointer hover:bg-blue-100 transition">
+                        ファイルを読み込む
+                        <input type="file" id="fileInput" class="hidden" accept=".csv,.tsv,.txt">
+                    </label>
+                </div>
+                <textarea id="csvInput" class="h-[500px] p-4 font-mono text-sm border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="ここにCSVを貼り付けるか、ファイルをドロップしてください..."></textarea>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <label class="font-semibold text-gray-700">Markdown Output</label>
+                    <button id="copyBtn" class="text-sm bg-green-600 text-white px-4 py-1 rounded hover:bg-green-700 transition flex items-center gap-2">
+                        <span>コピーする</span>
+                    </button>
+                </div>
+                <textarea id="mdOutput" readonly class="h-[500px] p-4 font-mono text-sm border border-gray-300 rounded-lg bg-gray-100 shadow-sm outline-none" placeholder="変換されたMarkdownがここに表示されます..."></textarea>
+            </div>
+        </div>
+
+        <div class="mt-6 p-4 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-wrap gap-6 items-center text-sm text-gray-700">
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="hasHeader" checked class="w-4 h-4 text-blue-600">
+                1行目をヘッダーにする
+            </label>
+            <div class="flex items-center gap-2">
+                <span>列の配置:</span>
+                <select id="align" class="border border-gray-300 rounded px-2 py-1 outline-none">
+                    <option value="left">左寄せ</option>
+                    <option value="center">中央寄せ</option>
+                    <option value="right">右寄せ</option>
+                </select>
+            </div>
+            <div id="status" class="ml-auto text-green-600 font-medium italic"></div>
+        </div>
+    </div>
+
+    <script>
+        const csvInput = document.getElementById('csvInput');
+        const mdOutput = document.getElementById('mdOutput');
+        const hasHeader = document.getElementById('hasHeader');
+        const alignSelect = document.getElementById('align');
+        const copyBtn = document.getElementById('copyBtn');
+        const fileInput = document.getElementById('fileInput');
+        const status = document.getElementById('status');
+
+        // 変換メインロジック
+        function convert() {
+            const rawData = csvInput.value;
+            if (!rawData.trim()) {
+                mdOutput.value = '';
+                return;
+            }
+
+            // PapaParseで解析（区切り文字は自動判定）
+            const results = Papa.parse(rawData, {
+                skipEmptyLines: true
+            });
+
+            const data = results.data;
+            if (data.length === 0) return;
+
+            let markdown = "";
+            const alignment = {
+                left: ":---",
+                center: ":---:",
+                right: "---:"
+            }[alignSelect.value];
+
+            data.forEach((row, index) => {
+                // セル内のパイプ記号をエスケープ
+                const cleanRow = row.map(cell => String(cell).replace(/\|/g, '\\|'));
+                markdown += `| ${cleanRow.join(" | ")} |\n`;
+
+                // ヘッダー行の下に区切り線を入れる
+                if (index === 0 && hasHeader.checked) {
+                    const separator = row.map(() => alignment);
+                    markdown += `| ${separator.join(" | ")} |\n`;
+                }
+            });
+
+            // ヘッダーなし設定の場合、一番上に空の区切り線を補完（Markdown仕様上）
+            if (!hasHeader.checked) {
+                const separator = data[0].map(() => alignment);
+                markdown = `| ${data[0].map(() => "").join(" | ")} |\n| ${separator.join(" | ")} |\n` + markdown;
+            }
+
+            mdOutput.value = markdown.trim();
+        }
+
+        // イベントリスナー
+        csvInput.addEventListener('input', convert);
+        hasHeader.addEventListener('change', convert);
+        alignSelect.addEventListener('change', convert);
+
+        // コピー機能
+        copyBtn.addEventListener('click', () => {
+            mdOutput.select();
+            document.execCommand('copy');
+            const originalText = copyBtn.innerText;
+            copyBtn.innerText = "完了！";
+            setTimeout(() => copyBtn.innerText = originalText, 2000);
+        });
+
+        // ファイル読み込み
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                csvInput.value = e.target.result;
+                convert();
+            };
+            reader.readAsText(file);
+        });
+
+        // ドラッグ＆ドロップ対応
+        csvInput.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            csvInput.classList.add('bg-blue-50');
+        });
+        csvInput.addEventListener('dragleave', () => csvInput.classList.remove('bg-blue-50'));
+        csvInput.addEventListener('drop', (e) => {
+            e.preventDefault();
+            csvInput.classList.remove('bg-blue-50');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    csvInput.value = e.target.result;
+                    convert();
+                };
+                reader.readAsText(file);
+            }
+        });
+    </script>
+</body>
+</html>
