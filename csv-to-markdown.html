@@ -42,14 +42,6 @@
                 <input type="checkbox" id="hasHeader" checked class="w-4 h-4 text-blue-600">
                 1行目をヘッダーにする
             </label>
-            <div class="flex items-center gap-2">
-                <span>列の配置:</span>
-                <select id="align" class="border border-gray-300 rounded px-2 py-1 outline-none">
-                    <option value="left">左寄せ</option>
-                    <option value="center">中央寄せ</option>
-                    <option value="right">右寄せ</option>
-                </select>
-            </div>
             <div id="status" class="ml-auto text-green-600 font-medium italic"></div>
         </div>
     </div>
@@ -58,7 +50,6 @@
         const csvInput = document.getElementById('csvInput');
         const mdOutput = document.getElementById('mdOutput');
         const hasHeader = document.getElementById('hasHeader');
-        const alignSelect = document.getElementById('align');
         const copyBtn = document.getElementById('copyBtn');
         const fileInput = document.getElementById('fileInput');
         const status = document.getElementById('status');
@@ -71,7 +62,7 @@
                 return;
             }
 
-            // PapaParseで解析（区切り文字は自動判定）
+            // PapaParseで解析
             const results = Papa.parse(rawData, {
                 skipEmptyLines: true
             });
@@ -80,11 +71,8 @@
             if (data.length === 0) return;
 
             let markdown = "";
-            const alignment = {
-                left: ":---",
-                center: ":---:",
-                right: "---:"
-            }[alignSelect.value];
+            // コロンを削除し、ハイフンのみの区切り線に固定
+            const alignment = "---";
 
             data.forEach((row, index) => {
                 // セル内のパイプ記号をエスケープ
@@ -98,7 +86,7 @@
                 }
             });
 
-            // ヘッダーなし設定の場合、一番上に空の区切り線を補完（Markdown仕様上）
+            // ヘッダーなし設定の場合
             if (!hasHeader.checked) {
                 const separator = data[0].map(() => alignment);
                 markdown = `| ${data[0].map(() => "").join(" | ")} |\n| ${separator.join(" | ")} |\n` + markdown;
@@ -110,7 +98,6 @@
         // イベントリスナー
         csvInput.addEventListener('input', convert);
         hasHeader.addEventListener('change', convert);
-        alignSelect.addEventListener('change', convert);
 
         // コピー機能
         copyBtn.addEventListener('click', () => {
