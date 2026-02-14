@@ -77,19 +77,17 @@
             data.forEach((row, index) => {
                 // セル内のパイプ記号をエスケープ
                 const cleanRow = row.map(cell => String(cell).replace(/\|/g, '\\|'));
-                markdown += `| ${cleanRow.join(" | ")} |\n`;
-
-                // ヘッダー行の下に区切り線を入れる
+                markdown += `|${cleanRow.join("|")}|\n`;
                 if (index === 0 && hasHeader.checked) {
                     const separator = row.map(() => alignment);
-                    markdown += `| ${separator.join(" | ")} |\n`;
+                    markdown += `|${separator.join("|")}|\n`;
                 }
             });
 
             // ヘッダーなし設定の場合
             if (!hasHeader.checked) {
                 const separator = data[0].map(() => alignment);
-                markdown = `| ${data[0].map(() => "").join(" | ")} |\n| ${separator.join(" | ")} |\n` + markdown;
+                markdown = `|${data[0].map(() => "").join("|")}|\n|${separator.join("|")}|\n` + markdown;
             }
 
             mdOutput.value = markdown.trim();
